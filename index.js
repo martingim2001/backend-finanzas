@@ -1,4 +1,5 @@
 require('dotenv').config();
+("La contraseña leída es:", process.env.DB_PASSWORD);
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
@@ -15,7 +16,7 @@ const conexion = mysql.createConnection({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   user: process.env.DB_USER,
-  password: process.DB_PASSWORD,
+  password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   ssl: {
     rejectUnauthorized: false
