@@ -102,9 +102,9 @@ app.delete('/api/movimientos/:id', (req, res) => {
   });
 });
 
-// 2. Encender el servidor
-// process.env.PORT es el puerto automático que nos dará la nube
-const PUERTO = process.env.PORT || 3000; 
-app.listen(PUERTO, () => {
-  console.log(`🚀 Servidor corriendo en el puerto ${PUERTO}`);
+// Render nos dará un puerto en process.env.PORT. Si no existe (en tu PC), usamos el 3000.
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
 });
