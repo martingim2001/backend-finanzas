@@ -1,3 +1,5 @@
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 ("La contraseña leída es:", process.env.DB_PASSWORD);
 const express = require('express');
@@ -100,6 +102,71 @@ app.delete('/api/movimientos/:id', (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
     res.json({ mensaje: 'Movimiento eliminado correctamente' });
   });
+});
+// ==========================================
+//        SISTEMA DE USUARIOS (SEGURIDAD)
+// ==========================================
+
+// 1. RUTA PARA REGISTRARSE
+app.post('/api/registro', async (req, res) => {
+  const { nombre, email, password } = req.body;
+  
+  try {
+    // La Trituradora: Encriptamos la contraseña para que sea ilegible
+    const salt = await bcrypt.genSalt(10);
+    const passwordEncriptada = await bcrypt.hash(password, salt);
+
+    // Guardamos al usuario en la base de datos
+    await conexion.query(
+      'INSERT INTO usuarios (nombre, email, password) VALUES (?, ?, ?)',
+      [nombre, email, passwordEncriptada]
+    );
+
+    res.status(201).json({ mensaje: "¡Usuario creado con éxito!" });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: "Ese email ya está registrado." });
+    }
+    console.error(error);
+    res.status(500).json({ error: "Error al registrar el usuario." });
+  }
+});
+
+// 2. RUTA PARA INICIAR SESIÓN (LOGIN)
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Buscamos si existe alguien con ese email
+    const [usuarios] = await conexion.query('SELECT * FROM usuarios WHERE email = ?', [email]);
+    
+    if (usuarios.length === 0) {
+      return res.status(400).json({ error: "Usuario no encontrado." });
+    }
+
+    const usuario = usuarios[0];
+
+    // Comparamos la contraseña que escribió con la encriptada
+    const contraseñaValida = await bcrypt.compare(password, usuario.password);
+    if (!contraseñaValida) {
+      return res.status(400).json({ error: "Contraseña incorrecta." });
+    }
+
+    // Fabricamos el "Pase VIP" (Token) que dura 2 horas
+    const secreto = process.env.JWT_SECRET || 'mi_llave_super_secreta_de_respaldo';
+    const token = jwt.sign({ id: usuario.id, nombre: usuario.nombre }, secreto, { expiresIn: '2h' });
+
+    // Le devolvemos el pase y sus datos
+    res.json({ 
+      mensaje: "¡Bienvenido!", 
+      token: token, 
+      usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email } 
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al iniciar sesión." });
+  }
 });
 
 // Render nos dará un puerto en process.env.PORT. Si no existe (en tu PC), usamos el 3000.
